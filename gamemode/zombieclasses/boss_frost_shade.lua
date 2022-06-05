@@ -7,7 +7,7 @@ CLASS.Help = "controls_frostshade"
 
 CLASS.Boss = true
 
-CLASS.Health = 1500
+CLASS.Health = 3000
 CLASS.Speed = 170
 
 CLASS.Points = 30
@@ -21,14 +21,14 @@ CLASS.Model = Model("models/player/zombie_fast.mdl")
 local math_cos = math.cos
 local math_abs = math.abs
 local math_Clamp = math.Clamp
+local util_Effect = util.Effect
 local CurTime = CurTime
 
 function CLASS:ScalePlayerDamage(pl, hitgroup, dmginfo)
 	if not dmginfo:IsBulletDamage() then return true end
 
 	if hitgroup == HITGROUP_LEFTLEG or hitgroup == HITGROUP_RIGHTLEG or hitgroup == HITGROUP_GEAR or hitgroup == HITGROUP_GENERIC then
-		dmginfo:SetDamage(0)
-		dmginfo:ScaleDamage(0)
+		dmginfo:SetDamage(dmginfo:GetDamage() * 0.6)
 	end
 
 	return true
@@ -44,7 +44,7 @@ function CLASS:OnKilled(pl, attacker, inflictor, suicide, headshot, dmginfo, ass
 			effectdata:SetOrigin(pl:WorldSpaceCenter())
 			effectdata:SetNormal(pl:GetUp())
 			effectdata:SetEntity(pl)
-		util.Effect("death_shade", effectdata, nil, true)
+		util_Effect("death_shade", effectdata, nil, true)
 	end
 
 	return true
@@ -111,11 +111,22 @@ CLASS.IconColor = Color(0, 190, 255)
 local nodraw = false
 local matWhite = Material("models/debug/debugwhite")
 local matRefract = Material("models/spawn_effect")
+local render_SupportsVertexShaders_2_0 = render.SupportsVertexShaders_2_0()
+local render_SupportsPixelShaders_2_0 = render.SupportsPixelShaders_2_0()
+local render_EnableClipping = render.EnableClipping
+local render_PushCustomClipPlane = render.PushCustomClipPlane
+local render_SetColorModulation = render.SetColorModulation
+local render_SetBlend = render.SetBlend
+local render_SuppressEngineLighting = render.SuppressEngineLighting
+local render_ModelMaterialOverride = render.ModelMaterialOverride
+local render_PopCustomClipPlane = render.PopCustomClipPlane
+local render_UpdateRefractTexture = render.UpdateRefractTexture
+
 function CLASS:PreRenderEffects(pl)
-	if render.SupportsVertexShaders_2_0() then
+	if render_SupportsVertexShaders_2_0 then
 		local normal = pl:GetUp()
-		render.EnableClipping(true)
-		render.PushCustomClipPlane(normal, normal:Dot(pl:GetPos() + normal * 16))
+		render_EnableClipping(true)
+		render_PushCustomClipPlane(normal, normal:Dot(pl:GetPos() + normal * 16))
 	end
 
 	if nodraw then return end
@@ -126,35 +137,35 @@ function CLASS:PreRenderEffects(pl)
 		red = 1 - math_Clamp((CurTime() - status:GetLastDamaged()) * 3, 0, 1) ^ 3
 	end
 
-	render.SetColorModulation(red, 0.7 * (1 - red), 1 - red)
-	render.SetBlend(0.5 + math_abs(math_cos(CurTime())) ^ 2 * 0.1)
-	render.SuppressEngineLighting(true)
-	render.ModelMaterialOverride(matWhite)
+	render_SetColorModulation(red, 0.7 * (1 - red), 1 - red)
+	render_SetBlend(0.5 + math_abs(math_cos(CurTime())) ^ 2 * 0.1)
+	render_SuppressEngineLighting(true)
+	render_ModelMaterialOverride(matWhite)
 end
 
 function CLASS:PostRenderEffects(pl)
-	if render.SupportsVertexShaders_2_0() then
-		render.PopCustomClipPlane()
-		render.EnableClipping(false)
+	if render_SupportsVertexShaders_2_0 then
+		render_PopCustomClipPlane()
+		render_EnableClipping(false)
 	end
 
 	if nodraw then return end
 
-	render.SetColorModulation(1, 1, 1)
-	render.SetBlend(1)
-	render.SuppressEngineLighting(false)
-	render.ModelMaterialOverride()
+	render_SetColorModulation(1, 1, 1)
+	render_SetBlend(1)
+	render_SuppressEngineLighting(false)
+	render_ModelMaterialOverride()
 
-	if render.SupportsPixelShaders_2_0() then
-		render.UpdateRefractTexture()
+	if render_SupportsPixelShaders_2_0 then
+		render_UpdateRefractTexture()
 
 		matRefract:SetFloat("$refractamount", 0.01)
 
-		render.ModelMaterialOverride(matRefract)
+		render_ModelMaterialOverride(matRefract)
 		nodraw = true
 		pl:DrawModel()
 		nodraw = false
-		render.ModelMaterialOverride(0)
+		render_ModelMaterialOverride(0)
 	end
 end
 

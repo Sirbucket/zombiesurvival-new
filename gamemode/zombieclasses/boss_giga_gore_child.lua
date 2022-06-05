@@ -159,7 +159,7 @@ end
 
 if SERVER then
 	function CLASS:OnKilled(pl, attacker, inflictor, suicide, headshot, dmginfo)
-		pl:FakeDeath(pl:LookupSequence("death_0"..math.random(4)), self.ModelScale)
+		pl:FakeDeath(pl:LookupSequence("death_0"..math_random(4)), self.ModelScale)
 
 		return true
 	end
@@ -202,7 +202,3 @@ function CLASS:DrawHands(pl, hands)
 
 	return true
 end
-
---[[function CLASS:ShouldDrawLocalPlayer()
-	return true
-end]]

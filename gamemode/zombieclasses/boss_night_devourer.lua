@@ -1,14 +1,14 @@
-CLASS.Name = "Devourer"
-CLASS.TranslationName = "class_devourer"
-CLASS.Description = "description_devourer"
-CLASS.Help = "controls_devourer"
+CLASS.Name = "Night Devourer"
+CLASS.TranslationName = "class_night_devourer"
+CLASS.Description = "description_night_devourer"
+CLASS.Help = "controls_night_devourer"
 
 CLASS.Boss = true
 
 CLASS.KnockbackScale = 0
 
-CLASS.Health = 1600
-CLASS.Speed = 160
+CLASS.Health = 2000
+CLASS.Speed = 180
 
 CLASS.CanTaunt = true
 
@@ -19,16 +19,11 @@ CLASS.Points = 30
 CLASS.SWEP = "weapon_zs_devourer"
 
 CLASS.Model = Model("models/player/charple.mdl")
-CLASS.OverrideModel = Model("models/player/skeleton.mdl")
-
-CLASS.NoHideMainModel = true
-
+CLASS.ModelScale = 1.3
 CLASS.VoicePitch = 0.65
 
 CLASS.PainSounds = {"npc/zombie/zombie_pain1.wav", "npc/zombie/zombie_pain2.wav", "npc/zombie/zombie_pain3.wav", "npc/zombie/zombie_pain4.wav", "npc/zombie/zombie_pain5.wav", "npc/zombie/zombie_pain6.wav"}
 CLASS.DeathSounds = {"npc/zombie/zombie_die1.wav", "npc/zombie/zombie_die2.wav", "npc/zombie/zombie_die3.wav"}
-
-CLASS.Skeletal = true
 
 local math_random = math.random
 local math_min = math.min
@@ -108,9 +103,17 @@ end
 
 if SERVER then
 	function CLASS:OnSpawned(pl)
-		pl:CreateAmbience("devourerambience")
+		pl:CreateAmbience("nightmareambience")
 	end
 end
+
+if not CLIENT then return end
+local math_Rand = math.Rand
+
+
+CLASS.Icon = "zombiesurvival/killicons/nightmare2"
+
+local render_SetColorModulation = render.SetColorModulation
 
 local vecSpineOffset = Vector(1, 3, 0)
 
@@ -136,8 +139,40 @@ local SpineBones = {
 	"ValveBiped.Bip01_Neck1"
 }
 
+local function CreateBoneOffsets(pl)
+	pl.m_NightmareBoneOffsetsNext = CurTime() + math_Rand(0.02, 0.1)
+
+	local offsets = {}
+	local angs = {}
+	for i=1, pl:GetBoneCount() - 1 do
+		if math_random(3) == 3 then
+			offsets[i] = VectorRand():GetNormalized() * math_Rand(0.5, 3)
+		end
+		if math_random(5) == 5 then
+			angs[i] = Angle(math_Rand(-5, 5), math_Rand(-15, 15), math_Rand(-5, 5))
+		end
+	end
+	pl.m_NightmareBoneOffsets = offsets
+	pl.m_NightmareBoneAngles = angs
+end
+
 function CLASS:BuildBonePositions(pl)
-	for _, bone in pairs(SpineBones) do
+	if not pl.m_NightmareBoneOffsets or CurTime() >= pl.m_NightmareBoneOffsetsNext then
+		CreateBoneOffsets(pl)
+	end
+
+	local offsets = pl.m_NightmareBoneOffsets
+	local angs = pl.m_NightmareBoneAngles
+	for i=1, pl:GetBoneCount() - 1 do
+		if offsets[i] then
+			pl:ManipulateBonePosition(i, offsets[i])
+		end
+		if angs[i] then
+			pl:ManipulateBoneAngles(i, angs[i])
+		end
+	end
+
+    for _, bone in pairs(SpineBones) do
 		local boneid = pl:LookupBone(bone)
 		if boneid and boneid > 0 then
 			pl:ManipulateBonePosition(boneid, vecSpineOffset)
@@ -151,31 +186,10 @@ function CLASS:BuildBonePositions(pl)
 		end
 	end
 end
-
-if not CLIENT then return end
-
-CLASS.Icon = "zombiesurvival/killicons/devourer"
-
-local matFlesh = Material("models/flesh")
-local matBlack = CreateMaterial("devourer", "UnlitGeneric", {["$basetexture"] = "Tools/toolsblack", ["$model"] = 1})
-local render_ModelMaterialOverride = render.ModelMaterialOverride
-local render_SetColorModulation = render.SetColorModulation
-
-
 function CLASS:PrePlayerDraw(pl)
-	render_ModelMaterialOverride(matFlesh)
-	render_SetColorModulation(0.45, 0.35, 0.05)
+	render_SetColorModulation(0.1, 0.1, 0.1)
 end
 
 function CLASS:PostPlayerDraw(pl)
 	render_SetColorModulation(1, 1, 1)
-	render_ModelMaterialOverride()
-end
-
-function CLASS:PrePlayerDrawOverrideModel(pl)
-	render_ModelMaterialOverride(matBlack)
-end
-
-function CLASS:PostPlayerDrawOverrideModel(pl)
-	render_ModelMaterialOverride(nil)
 end

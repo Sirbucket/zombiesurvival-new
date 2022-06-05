@@ -19,12 +19,14 @@ CLASS.Icon = "zombiesurvival/killicons/poisonheadcrab"
 CLASS.IconColor = Color(236, 218, 0)
 
 local matSkin = Material("Models/Barnacle/barnacle_sheet")
+local render_ModelMaterialOverride = render.ModelMaterialOverride
+local render_SetColorModulation = render.SetColorModulation
 function CLASS:PrePlayerDraw(pl)
-	render.ModelMaterialOverride(matSkin)
-	render.SetColorModulation(0.65, 0.65, 0.5)
+	render_ModelMaterialOverride(matSkin)
+	render_SetColorModulation(0.65, 0.65, 0.5)
 end
 
 function CLASS:PostPlayerDraw(pl)
-	render.ModelMaterialOverride()
-	render.SetColorModulation(1, 1, 1)
+	render_ModelMaterialOverride()
+	render_SetColorModulation(1, 1, 1)
 end

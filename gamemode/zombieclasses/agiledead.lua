@@ -110,6 +110,12 @@ function CLASS:DoAnimationEvent(pl, event, data)
 	end
 end
 
+if SERVER then
+	function CLASS:AltUse(pl)
+        pl:StartFeignDeath()
+    end
+end
+
 if not CLIENT then return end
 
 CLASS.Icon = "zombiesurvival/killicons/fresh_dead"

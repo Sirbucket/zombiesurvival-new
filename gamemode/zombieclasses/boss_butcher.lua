@@ -8,7 +8,7 @@ CLASS.Boss = true
 CLASS.KnockbackScale = 0
 
 CLASS.Health = 1600
-CLASS.Speed = 215
+CLASS.Speed = 225
 
 CLASS.CanTaunt = true
 
@@ -121,6 +121,7 @@ CLASS.Icon = "zombiesurvival/killicons/butcher"
 
 local render_SetMaterial = render.SetMaterial
 local render_DrawSprite = render.DrawSprite
+local render_SetColorModulation = render.SetColorModulation 
 local angle_zero = angle_zero
 local LocalToWorld = LocalToWorld
 
@@ -130,11 +131,11 @@ local vecEyeLeft = Vector(4, -4.6, -1)
 local vecEyeRight = Vector(4, -4.6, 1)
 
 function CLASS:PrePlayerDraw(pl)
-	render.SetColorModulation(1, 0.5, 0.5)
+	render_SetColorModulation(1, 0.5, 0.5)
 end
 
 function CLASS:PostPlayerDraw(pl)
-	render.SetColorModulation(1, 1, 1)
+	render_SetColorModulation(1, 1, 1)
 
 	if pl == MySelf and not pl:ShouldDrawLocalPlayer() or pl.SpawnProtection then return end
 

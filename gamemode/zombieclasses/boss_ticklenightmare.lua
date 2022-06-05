@@ -1,14 +1,13 @@
-CLASS.Name = "The Tickle Monster"
-CLASS.TranslationName = "class_the_tickle_monster"
-CLASS.Description = "description_the_tickle_monster"
-CLASS.Help = "controls_the_tickle_monster"
+CLASS.Name = "The Tickle Nightmare"
+CLASS.TranslationName = "class_the_tickle_nightmare"
+CLASS.Description = "description_the_tickle_nightmare"
+CLASS.Help = "controls_the_tickle_nightmare"
 
 CLASS.Boss = true
 
 CLASS.KnockbackScale = 0
-
-CLASS.Health = 1750
-CLASS.Speed = 150
+CLASS.Health = 2250
+CLASS.Speed = 175
 
 CLASS.FearPerInstance = 1
 
@@ -16,12 +15,12 @@ CLASS.CanTaunt = true
 
 CLASS.Points = 30
 
-CLASS.SWEP = "weapon_zs_ticklemonster"
+CLASS.SWEP = "weapon_zs_ticklenightmare"
 
 CLASS.Model = Model("models/player/zombie_classic_hbfix.mdl")
-CLASS.OverrideModel = Model("models/player/zombie_fast.mdl")
+CLASS.OverrideModel = Model("models/player/charple.mdl")
 
-CLASS.VoicePitch = 0.8
+CLASS.VoicePitch = 0.65
 
 CLASS.PainSounds = {"npc/zombie/zombie_pain1.wav", "npc/zombie/zombie_pain2.wav", "npc/zombie/zombie_pain3.wav", "npc/zombie/zombie_pain4.wav", "npc/zombie/zombie_pain5.wav", "npc/zombie/zombie_pain6.wav"}
 CLASS.DeathSounds = {"npc/zombie/zombie_die1.wav", "npc/zombie/zombie_die2.wav", "npc/zombie/zombie_die3.wav"}
@@ -129,19 +128,51 @@ function CLASS:DoAnimationEvent(pl, event, data)
 	end
 end
 
+
 if SERVER then
 	function CLASS:OnSpawned(pl)
-		pl:CreateAmbience("ticklemonsterambience")
+		pl:CreateAmbience("nightmareambience")
 	end
 end
 
 if not CLIENT then return end
+local math_Rand = math.Rand
+CLASS.Icon = "zombiesurvival/killicons/nightmare2"
 
-CLASS.Icon = "zombiesurvival/killicons/tickle"
+local function CreateBoneOffsets(pl)
+	pl.m_NightmareBoneOffsetsNext = CurTime() + math_Rand(0.02, 0.1)
+
+	local offsets = {}
+	local angs = {}
+	for i=1, pl:GetBoneCount() - 1 do
+		if math_random(3) == 3 then
+			offsets[i] = VectorRand():GetNormalized() * math_Rand(0.5, 3)
+		end
+		if math_random(5) == 5 then
+			angs[i] = Angle(math_Rand(-5, 5), math_Rand(-15, 15), math_Rand(-5, 5))
+		end
+	end
+	pl.m_NightmareBoneOffsets = offsets
+	pl.m_NightmareBoneAngles = angs
+end
 
 local vecSpineOffset = Vector(8, 0, 0)
 local SpineBones = {"ValveBiped.Bip01_Spine2", "ValveBiped.Bip01_Spine4", "ValveBiped.Bip01_Spine3"}
 function CLASS:BuildBonePositions(pl)
+	if not pl.m_NightmareBoneOffsets or CurTime() >= pl.m_NightmareBoneOffsetsNext then
+		CreateBoneOffsets(pl)
+	end
+
+	local offsets = pl.m_NightmareBoneOffsets
+	local angs = pl.m_NightmareBoneAngles
+	for i=1, pl:GetBoneCount() - 1 do
+		if offsets[i] then
+			pl:ManipulateBonePosition(i, offsets[i])
+		end
+		if angs[i] then
+			pl:ManipulateBoneAngles(i, angs[i])
+		end
+	end
 	for _, bone in pairs(SpineBones) do
 		local spineid = pl:LookupBone(bone)
 		if spineid and spineid > 0 then
@@ -168,4 +199,13 @@ function CLASS:BuildBonePositions(pl)
 			pl:ManipulateBoneScale(rarmid, Vector(pl.m_TMArmLength, 2, 2))
 		end
 	end
+end
+
+local render_SetColorModulation = render.SetColorModulation
+function CLASS:PrePlayerDraw(pl)
+	render_SetColorModulation(0.1, 0.1, 0.1)
+end
+
+function CLASS:PostPlayerDraw(pl)
+	render_SetColorModulation(1, 1, 1)
 end

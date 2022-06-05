@@ -25,8 +25,9 @@ CLASS.BloodColor = BLOOD_COLOR_GREEN
 local math_random = math.random
 local math_min = math.min
 local math_ceil = math.ceil
+local math_Rand = math.Rand
 local CurTime = CurTime
---local string_format = string.format
+local string_format = string.format
 
 local STEPSOUNDTIME_NORMAL = STEPSOUNDTIME_NORMAL
 local STEPSOUNDTIME_WATER_FOOT = STEPSOUNDTIME_WATER_FOOT
@@ -37,16 +38,19 @@ local ACT_HL2MP_IDLE_CROUCH_ZOMBIE = ACT_HL2MP_IDLE_CROUCH_ZOMBIE
 local ACT_HL2MP_RUN_ZOMBIE = ACT_HL2MP_RUN_ZOMBIE
 local ACT_HL2MP_WALK_CROUCH_ZOMBIE_01 = ACT_HL2MP_WALK_CROUCH_ZOMBIE_01
 local ACT_HL2MP_RUN_CHARGING = ACT_HL2MP_RUN_CHARGING
-
---[[function CLASS:PlayPainSound(pl)
-	pl:EmitSound(string_format("npc/zombie_poison/pz_warn%d.wav", math.random(2)), 75, math.Rand(137, 143))
+local PLAYERANIMEVENT_ATTACK_PRIMARY = PLAYERANIMEVENT_ATTACK_PRIMARY
+local GESTURE_SLOT_ATTACK_AND_RELOAD = GESTURE_SLOT_ATTACK_AND_RELOAD
+local ACT_GMOD_GESTURE_TAUNT_ZOMBIE = ACT_GMOD_GESTURE_TAUNT_ZOMBIE
+local ACT_INVALID = ACT_INVALID
+function CLASS:PlayPainSound(pl)
+	pl:EmitSound(string_format("npc/zombie_poison/pz_warn%d.wav", math_random(2)), 75, math_Rand(137, 143))
 	pl.NextPainSound = CurTime() + 0.5
 
 	return true
-end]]
+end
 
 function CLASS:PlayDeathSound(pl)
-	pl:EmitSound("npc/zombie_poison/pz_die2.wav", 75, math.Rand(122, 128))
+	pl:EmitSound("npc/zombie_poison/pz_die2.wav", 75, math_Rand(122, 128))
 
 	return true
 end
@@ -132,3 +136,50 @@ function CLASS:Move(pl, mv)
 		return true
 	end
 end
+
+if SERVER then 
+    local util_Effect = util.Effect
+    local util_PoisonBlastDamage = util.PoisonBlastDamage
+    local timer_Simple = timer.Simple
+    function CLASS:CanPlayerSuicide(pl)
+        local wep = pl:GetActiveWeapon()
+        if wep:IsValid() and wep.GetCharge and wep:GetCharge() > 0 then return false end
+    end
+
+    local function DoExplode(pl, pos, magnitude, dmginfo)
+        local inflictor = pl:GetActiveWeapon()
+        if not inflictor:IsValid() then inflictor = pl end
+
+        local effectdata = EffectData()
+            effectdata:SetOrigin(pos)
+            effectdata:SetMagnitude(magnitude)
+        util_Effect("explosion_chem", effectdata, true)
+
+        util_PoisonBlastDamage(inflictor, pl, pos, 38 + magnitude * 46, magnitude * 39, true, true)
+
+        pl:CheckRedeem()
+    end
+
+    function CLASS:OnKilled(pl, attacker, inflictor, suicide, headshot, dmginfo, assister)
+        local magnitude = 1
+        local wep = pl:GetActiveWeapon()
+        if wep:IsValid() and wep.GetCharge then magnitude = wep:GetCharge() end
+
+        if suicide and magnitude < 1 then return end
+        magnitude = 0.25 + magnitude * 0.75
+
+        local pos = pl:WorldSpaceCenter()
+
+        timer_Simple(0, function() DoExplode(pl, pos, magnitude, dmginfo) end)
+
+        return true
+    end
+
+    function CLASS:OnSpawned(pl)
+        pl:CreateAmbience("bursterambience")
+    end
+end
+
+if not CLIENT then return end
+
+CLASS.Icon = "zombiesurvival/killicons/chemzombie"

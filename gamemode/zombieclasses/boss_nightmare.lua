@@ -8,7 +8,7 @@ CLASS.Boss = true
 CLASS.KnockbackScale = 0
 
 CLASS.Health = 2000
-CLASS.Speed = 280 -- 150
+CLASS.Speed = 150
 
 CLASS.CanTaunt = true
 
@@ -36,6 +36,11 @@ local ACT_HL2MP_SWIM_PISTOL = ACT_HL2MP_SWIM_PISTOL
 local ACT_HL2MP_IDLE_CROUCH_ZOMBIE = ACT_HL2MP_IDLE_CROUCH_ZOMBIE
 local ACT_HL2MP_WALK_CROUCH_ZOMBIE_01 = ACT_HL2MP_WALK_CROUCH_ZOMBIE_01
 local ACT_HL2MP_RUN_ZOMBIE = ACT_HL2MP_RUN_ZOMBIE
+local PLAYERANIMEVENT_ATTACK_PRIMARY = PLAYERANIMEVENT_ATTACK_PRIMARY
+local ACT_INVALID = ACT_INVALID
+local PLAYERANIMEVENT_RELOAD = PLAYERANIMEVENT_RELOAD
+local GESTURE_SLOT_ATTACK_AND_RELOAD = GESTURE_SLOT_ATTACK_AND_RELOAD
+local ACT_GMOD_GESTURE_TAUNT_ZOMBIE = ACT_GMOD_GESTURE_TAUNT_ZOMBIE
 
 local StepSounds = {
 	"npc/zombie/foot1.wav",
@@ -102,7 +107,7 @@ local function CreateBoneOffsets(pl)
 	local angs = {}
 	for i=1, pl:GetBoneCount() - 1 do
 		if math_random(3) == 3 then
-			offsets[i] = VectorRand():GetNormalized() * math.Rand(0.5, 3)
+			offsets[i] = VectorRand():GetNormalized() * math_Rand(0.5, 3)
 		end
 		if math_random(5) == 5 then
 			angs[i] = Angle(math_Rand(-5, 5), math_Rand(-15, 15), math_Rand(-5, 5))
@@ -129,10 +134,11 @@ function CLASS:BuildBonePositions(pl)
 	end
 end
 
+local render_SetColorModulation = render.SetColorModulation
 function CLASS:PrePlayerDraw(pl)
-	render.SetColorModulation(0.1, 0.1, 0.1)
+	render_SetColorModulation(0.1, 0.1, 0.1)
 end
 
 function CLASS:PostPlayerDraw(pl)
-	render.SetColorModulation(1, 1, 1)
+	render_SetColorModulation(1, 1, 1)
 end

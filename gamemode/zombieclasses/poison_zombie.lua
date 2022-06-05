@@ -5,7 +5,7 @@ CLASS.Help = "controls_poison_zombie"
 
 CLASS.BetterVersion = "Wild Poison Zombie"
 
-CLASS.Model = Model("models/zombie/Poison_fix.mdl")
+CLASS.Model = Model("models/zombie/Poison.mdl")
 
 CLASS.Wave = 4 / 6
 

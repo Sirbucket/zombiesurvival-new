@@ -42,7 +42,11 @@ local ACT_HL2MP_SWIM_PISTOL = ACT_HL2MP_SWIM_PISTOL
 local ACT_HL2MP_IDLE_CROUCH_ZOMBIE = ACT_HL2MP_IDLE_CROUCH_ZOMBIE
 local ACT_HL2MP_WALK_CROUCH_ZOMBIE_01 = ACT_HL2MP_WALK_CROUCH_ZOMBIE_01
 local ACT_HL2MP_RUN_ZOMBIE = ACT_HL2MP_RUN_ZOMBIE
-
+local PLAYERANIMEVENT_ATTACK_PRIMARY = PLAYERANIMEVENT_ATTACK_PRIMARY
+local ACT_INVALID = ACT_INVALID
+local GESTURE_SLOT_ATTACK_AND_RELOAD = GESTURE_SLOT_ATTACK_AND_RELOAD
+local ACT_GMOD_GESTURE_TAUNT_ZOMBIE = ACT_GMOD_GESTURE_TAUNT_ZOMBIE
+local PLAYERANIMEVENT_RELOAD = PLAYERANIMEVENT_RELOAD
 function CLASS:PlayPainSound(pl)
 	pl:EmitSound(string_format("npc/zombie_poison/pz_idle%d.wav", math_random(2, 3)), 72, math_Rand(75, 85))
 	pl.NextPainSound = CurTime() + 0.5
@@ -130,3 +134,53 @@ end
 function CLASS:DoesntGiveFear(pl)
 	return pl.FeignDeath and pl.FeignDeath:IsValid()
 end
+
+if SERVER then
+    function CLASS:AltUse(pl)
+        pl:StartFeignDeath()
+    end
+
+    local function Bomb(pl, pos, dir)
+        if not IsValid(pl) then return end
+
+        dir:RotateAroundAxis(dir:Right(), 30)
+
+        local effectdata = EffectData()
+            effectdata:SetOrigin(pos)
+            effectdata:SetNormal(dir:Forward())
+        util.Effect("explosion_fat", effectdata, true)
+
+        for i=1, 6 do
+            local ang = Angle()
+            ang:Set(dir)
+            ang:RotateAroundAxis(ang:Up(), math.Rand(-30, 30))
+            ang:RotateAroundAxis(ang:Right(), math.Rand(-30, 30))
+
+            local heading = ang:Forward()
+
+            local ent = ents.CreateLimited("projectile_poisonflesh")
+            if ent:IsValid() then
+                ent:SetPos(pos)
+                ent:SetOwner(pl)
+                ent:Spawn()
+
+                local phys = ent:GetPhysicsObject()
+                if phys:IsValid() then
+                    phys:Wake()
+                    phys:SetVelocityInstantaneous(heading * math.Rand(120, 250))
+                end
+            end
+        end
+    end
+
+    function CLASS:OnKilled(pl, attacker, inflictor, suicide, headshot, dmginfo, assister)
+        if attacker ~= pl and not suicide then
+            local pos = pl:LocalToWorld(pl:OBBCenter())
+            local ang = pl:SyncAngles()
+            timer.Simple(0, function() Bomb(pl, pos, ang) end)
+        end
+    end
+end
+
+if not CLIENT then return end
+CLASS.Icon = "zombiesurvival/killicons/bloatedzombie"

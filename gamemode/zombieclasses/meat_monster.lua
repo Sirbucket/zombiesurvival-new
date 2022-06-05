@@ -1,37 +1,31 @@
-CLASS.Name = "Devourer"
-CLASS.TranslationName = "class_devourer"
-CLASS.Description = "description_devourer"
-CLASS.Help = "controls_devourer"
+CLASS.Name = "Meat Monster"
+CLASS.TranslationName = "class_meat_monster"
+CLASS.Description = "description_meat_monster"
+CLASS.Help = "controls_meat_monster"
 
-CLASS.Boss = true
+CLASS.Health = 745
+CLASS.Speed = 150
 
-CLASS.KnockbackScale = 0
-
-CLASS.Health = 1600
-CLASS.Speed = 160
-
+CLASS.Wave = 3 / 6
+CLASS.Unlocked = true
 CLASS.CanTaunt = true
 
-CLASS.FearPerInstance = 1
+CLASS.Mass = DEFAULT_MASS * 1.5
 
-CLASS.Points = 30
+CLASS.Points = CLASS.Health/GM.PoisonZombiePointRatio
 
-CLASS.SWEP = "weapon_zs_devourer"
+CLASS.SWEP = "weapon_zs_meat_monster"
 
 CLASS.Model = Model("models/player/charple.mdl")
-CLASS.OverrideModel = Model("models/player/skeleton.mdl")
-
-CLASS.NoHideMainModel = true
-
+CLASS.ModelScale = 0.95
 CLASS.VoicePitch = 0.65
 
 CLASS.PainSounds = {"npc/zombie/zombie_pain1.wav", "npc/zombie/zombie_pain2.wav", "npc/zombie/zombie_pain3.wav", "npc/zombie/zombie_pain4.wav", "npc/zombie/zombie_pain5.wav", "npc/zombie/zombie_pain6.wav"}
 CLASS.DeathSounds = {"npc/zombie/zombie_die1.wav", "npc/zombie/zombie_die2.wav", "npc/zombie/zombie_die3.wav"}
 
-CLASS.Skeletal = true
-
 local math_random = math.random
 local math_min = math.min
+local math_Clamp = math.Clamp
 local CurTime = CurTime
 
 local ACT_HL2MP_SWIM_PISTOL = ACT_HL2MP_SWIM_PISTOL
@@ -110,6 +104,31 @@ if SERVER then
 	function CLASS:OnSpawned(pl)
 		pl:CreateAmbience("devourerambience")
 	end
+	function CLASS:AltUse(pl)
+        pl:StartFeignDeath()
+    end
+	function CLASS:ProcessDamage(pl, dmginfo) -- Provided by HST, ty!
+		local inflictor = dmginfo:GetInflictor()
+		local class_health = self.Health
+	
+		if not IsValid(inflictor) then return end
+	
+		local mul = 1
+		local melee = inflictor.IsMelee
+		local bullet = inflictor.IsBullet
+		local bleed = inflictor.IsBleed
+		local explosive = inflictor.IsExplosive
+		local formula = pl:Health() / class_health
+		if melee or bullet then
+			mul = math_Clamp(formula, 0.75, 1)
+		elseif explosive then
+			mul = math_Clamp(formula, 0.5, 1)
+		elseif bleed then
+			mul = 2
+		end
+	
+		dmginfo:SetDamage(dmginfo:GetDamage() * mul)
+	end
 end
 
 local vecSpineOffset = Vector(1, 3, 0)
@@ -157,25 +176,15 @@ if not CLIENT then return end
 CLASS.Icon = "zombiesurvival/killicons/devourer"
 
 local matFlesh = Material("models/flesh")
-local matBlack = CreateMaterial("devourer", "UnlitGeneric", {["$basetexture"] = "Tools/toolsblack", ["$model"] = 1})
 local render_ModelMaterialOverride = render.ModelMaterialOverride
 local render_SetColorModulation = render.SetColorModulation
 
-
 function CLASS:PrePlayerDraw(pl)
 	render_ModelMaterialOverride(matFlesh)
-	render_SetColorModulation(0.45, 0.35, 0.05)
+	render_SetColorModulation(0.65, 0.45, 0.15)
 end
 
 function CLASS:PostPlayerDraw(pl)
 	render_SetColorModulation(1, 1, 1)
 	render_ModelMaterialOverride()
-end
-
-function CLASS:PrePlayerDrawOverrideModel(pl)
-	render_ModelMaterialOverride(matBlack)
-end
-
-function CLASS:PostPlayerDrawOverrideModel(pl)
-	render_ModelMaterialOverride(nil)
 end

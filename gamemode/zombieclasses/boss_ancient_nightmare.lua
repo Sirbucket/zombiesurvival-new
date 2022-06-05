@@ -7,8 +7,8 @@ CLASS.Help = "controls_ancient_nightmare"
 
 CLASS.Boss = true
 
-CLASS.Health = 1825
-CLASS.Speed = 165
+CLASS.Health = 2500
+CLASS.Speed = 175
 
 CLASS.Points = 30
 
@@ -18,6 +18,7 @@ CLASS.Model = Model("models/player/skeleton.mdl")
 CLASS.OverrideModel = false
 
 CLASS.Skeletal = true
+CLASS.SkeletalRes = true
 
 local math_random = math.random
 

@@ -14,7 +14,7 @@ CLASS.SWEP = "weapon_zs_pukepus"
 
 CLASS.Model = Model("models/Zombie/Poison.mdl")
 
-CLASS.Speed = 135 --120
+CLASS.Speed = 135
 CLASS.Points = 40
 
 CLASS.PainSounds = {"NPC_PoisonZombie.Pain"}
@@ -22,24 +22,19 @@ CLASS.DeathSounds = {Sound("npc/zombie_poison/pz_call1.wav")}
 
 CLASS.VoicePitch = 0.5
 
---[[CLASS.ModelScale = 1.5
-CLASS.Mass = 200
-CLASS.ViewOffset = Vector(0, 0, 75)
-CLASS.ViewOffsetDucked = Vector(0, 0, 48)
-CLASS.StepSize = 25]]
---[[CLASS.Hull = {Vector(-22, -22, 0), Vector(22, 22, 96)}
-CLASS.HullDuck = {Vector(-22, -22, 0), Vector(22, 22, 58)}]]
-
 CLASS.ViewOffset = Vector(0, 0, 50)
 CLASS.Hull = {Vector(-16, -16, 0), Vector(16, 16, 64)}
 CLASS.HullDuck = {Vector(-16, -16, 0), Vector(16, 16, 35)}
-
---CLASS.JumpPower = DEFAULT_JUMP_POWER * 1.216
 
 CLASS.BloodColor = BLOOD_COLOR_YELLOW
 
 local math_random = math.random
 local math_min = math.min
+local math_max = math.max
+local math_floor = math.floor
+local math_Rand = math.Rand
+local string_format = string.format
+local timer_Simple = timer.Simple
 
 local ACT_IDLE = ACT_IDLE
 local STEPSOUNDTIME_NORMAL = STEPSOUNDTIME_NORMAL
@@ -136,14 +131,14 @@ function CLASS:BuildBonePositions(pl)
 end
 
 local function CreateFlesh(pl, damage, damagepos, damagedir)
-	damage = math.min(damage, 300)
+	damage = math_min(damage, 300)
 
-	pl:EmitSound(string.format("physics/body/body_medium_break%d.wav", math.random(2, 4)), 74, 125 - damage * 0.50)
+	pl:EmitSound(string_format("physics/body/body_medium_break%d.wav", math_random(2, 4)), 74, 125 - damage * 0.50)
 
 	if SERVER then
 		damagepos = pl:LocalToWorld(damagepos)
 
-		for i=1, math.max(1, math.floor(damage / 12)) do
+		for i=1, math_max(1, math_floor(damage / 12)) do
 			local ent = ents.Create("projectile_poisonflesh")
 			if ent:IsValid() then
 				local heading = (damagedir + VectorRand() * 0.3):GetNormalized()
@@ -154,7 +149,7 @@ local function CreateFlesh(pl, damage, damagepos, damagedir)
 				local phys = ent:GetPhysicsObject()
 				if phys:IsValid() then
 					phys:Wake()
-					phys:SetVelocityInstantaneous(math.min(325, 100 + damage ^ math.Rand(1.15, 1.25)) * heading)
+					phys:SetVelocityInstantaneous(math_min(325, 100 + damage ^ math_Rand(1.15, 1.25)) * heading)
 				end
 			end
 		end
@@ -168,7 +163,7 @@ function CLASS:ProcessDamage(pl, dmginfo)
 
 		local pos = pl:WorldToLocal(dmginfo:GetDamagePosition())
 		local norm = dmginfo:GetDamageForce():GetNormalized() * -1
-		timer.Simple(0, function()
+		timer_Simple(0, function()
 			if pl:IsValid() then
 				CreateFlesh(pl, damage, pos, norm)
 			end
@@ -180,7 +175,7 @@ if SERVER then
 	function CLASS:OnKilled(pl, attacker, inflictor, suicide, headshot, dmginfo, assister)
 		local pos = pl:WorldToLocal(dmginfo:GetDamagePosition())
 		local norm = dmginfo:GetDamageForce():GetNormalized() * -1
-		timer.Simple(0, function()
+		timer_Simple(0, function()
 			if pl:IsValid() then
 				CreateFlesh(pl, 300, pos, norm)
 			end
@@ -193,10 +188,11 @@ if not CLIENT then return end
 CLASS.Icon = "zombiesurvival/killicons/pukepus"
 
 local matSkin = Material("Models/Barnacle/barnacle_sheet")
+local render_ModelMaterialOverride = render.ModelMaterialOverride
 function CLASS:PrePlayerDraw(pl)
-	render.ModelMaterialOverride(matSkin)
+	render_ModelMaterialOverride(matSkin)
 end
 
 function CLASS:PostPlayerDraw(pl)
-	render.ModelMaterialOverride()
+	render_ModelMaterialOverride()
 end
