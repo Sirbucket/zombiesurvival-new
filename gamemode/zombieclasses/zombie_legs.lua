@@ -37,19 +37,35 @@ CLASS.SWEP = "weapon_zs_zombielegs"
 CLASS.BloodColor = -1
 
 local math_random = math.random
+local math_min = math.min
+local math_max = math.max
 
+local HITGROUP_LEFTLEG = HITGROUP_LEFTLEG
+local HITGROUP_RIGHTLEG = HITGROUP_RIGHTLEG
+local HITGROUP_GEAR = HITGROUP_GEAR
+local HITGROUP_GENERIC = HITGROUP_GENERIC
+local DIR_BACK = DIR_BACK
+local CurTime = CurTime
+
+local STEPSOUNDTIME_NORMAL = STEPSOUNDTIME_NORMAL
+local STEPSOUNDTIME_WATER_FOOT = STEPSOUNDTIME_WATER_FOOT
+local STEPSOUNDTIME_ON_LADDER = STEPSOUNDTIME_ON_LADDER
+local STEPSOUNDTIME_WATER_KNEE = STEPSOUNDTIME_WATER_KNEE
+local ACT_HL2MP_ZOMBIE_SLUMP_RISE = ACT_HL2MP_ZOMBIE_SLUMP_RISE
+local ACT_HL2MP_IDLE_ZOMBIE = ACT_HL2MP_IDLE_ZOMBIE
+local ACT_HL2MP_RUN_ZOMBIE = ACT_HL2MP_RUN_ZOMBIE
+
+local g_tbl = {
+	[1] = STEPSOUNDTIME_NORMAL,
+	[2] = STEPSOUNDTIME_WATER_FOOT,
+	[3] = STEPSOUNDTIME_ON_LADDER,
+	[4] = STEPSOUNDTIME_WATER_KNEE,
+	[5] = ACT_HL2MP_ZOMBIE_SLUMP_RISE,
+	[6] = ACT_HL2MP_IDLE_ZOMBIE,
+	[7] = ACT_HL2MP_RUN_ZOMBIE
+}
 function CLASS:DoesntGiveFear(pl)
 	return pl.FeignDeath and pl.FeignDeath:IsValid()
-end
-
-if SERVER then
-	function CLASS:AltUse(pl)
-		pl:StartFeignDeath()
-	end
-
-	function CLASS:IgnoreLegDamage(pl, dmginfo)
-		return true
-	end
 end
 
 function CLASS:ScalePlayerDamage(pl, hitgroup, dmginfo)
@@ -63,90 +79,51 @@ function CLASS:ScalePlayerDamage(pl, hitgroup, dmginfo)
 	return true
 end
 
---[[function CLASS:Move(pl, mv)
-	local wep = pl:GetActiveWeapon()
-	if wep.Move and wep:Move(mv) then
-		return true
-	end
-end]]
-
 function CLASS:ShouldDrawLocalPlayer(pl)
 	return true
 end
 
-local StepSounds = {
-	"npc/zombie/foot1.wav",
-	"npc/zombie/foot2.wav",
-	"npc/zombie/foot3.wav"
-}
-local ScuffSounds = {
-	"npc/zombie/foot_slide1.wav",
-	"npc/zombie/foot_slide2.wav",
-	"npc/zombie/foot_slide3.wav"
-}
 function CLASS:PlayerFootstep(pl, vFootPos, iFoot, strSoundName, fVolume, pFilter)
-	if math_random() < 0.15 then
-		pl:EmitSound(ScuffSounds[math_random(#ScuffSounds)], 70)
+	if iFoot == 0 then
+		pl:EmitSound("npc/zombie/foot1.wav", 70)
 	else
-		pl:EmitSound(StepSounds[math_random(#StepSounds)], 70)
+		pl:EmitSound("npc/zombie/foot2.wav", 70)
 	end
 
 	return true
 end
---[[function CLASS:PlayerFootstep(pl, vFootPos, iFoot, strSoundName, fVolume, pFilter)
-	if iFoot == 0 then
-		if math_random() < 0.15 then
-			pl:EmitSound("Zombie.ScuffLeft")
-		else
-			pl:EmitSound("Zombie.FootstepLeft")
-		end
-	else
-		if math_random() < 0.15 then
-			pl:EmitSound("Zombie.ScuffRight")
-		else
-			pl:EmitSound("Zombie.FootstepRight")
-		end
-	end
-
-	return true
-end]]
 
 function CLASS:PlayerStepSoundTime(pl, iType, bWalking)
-	if iType == STEPSOUNDTIME_NORMAL or iType == STEPSOUNDTIME_WATER_FOOT then
-		return 625 - pl:GetVelocity():Length()
-	elseif iType == STEPSOUNDTIME_ON_LADDER then
-		return 600
-	elseif iType == STEPSOUNDTIME_WATER_KNEE then
-		return 750
-	end
+	local switch = {
+		[g_tbl[1]] = function(pl) return 625 - pl:GetVelocity():Length() end,
+		[g_tbl[2]] = function(pl) return 625 - pl:GetVelocity():Length() end,
+		[g_tbl[3]] = function(pl) return 600 end,
+		[g_tbl[4]] = function(pl) return 750 end
+	}
 
-	return 450
+	return switch[iType] and switch[iType](pl) or 450
 end
 
 function CLASS:CalcMainActivity(pl, velocity)
 	local feign = pl.FeignDeath
 	if feign and feign:IsValid() then
-		if feign:GetDirection() == DIR_BACK then
-			return 1, pl:LookupSequence("zombie_slump_rise_02_fast")
-		end
-
-		return ACT_HL2MP_ZOMBIE_SLUMP_RISE, -1
+		return g_tbl[5], -1
 	end
 
 	if velocity:Length2DSqr() <= 1 then
-		return ACT_HL2MP_IDLE_ZOMBIE, -1
+		return g_tbl[6], -1
 	end
 
-	return ACT_HL2MP_RUN_ZOMBIE, -1
+	return g_tbl[7], -1
 end
 
 function CLASS:UpdateAnimation(pl, velocity, maxseqgroundspeed)
 	local feign = pl.FeignDeath
 	if feign and feign:IsValid() then
 		if feign:GetState() == 1 then
-			pl:SetCycle(1 - math.max(feign:GetStateEndTime() - CurTime(), 0) * 0.666)
+			pl:SetCycle(1 - math_max(feign:GetStateEndTime() - CurTime(), 0) * 0.666)
 		else
-			pl:SetCycle(math.max(feign:GetStateEndTime() - CurTime(), 0) * 0.666)
+			pl:SetCycle(math_max(feign:GetStateEndTime() - CurTime(), 0) * 0.666)
 		end
 		pl:SetPlaybackRate(0)
 
@@ -155,7 +132,7 @@ function CLASS:UpdateAnimation(pl, velocity, maxseqgroundspeed)
 
 	local len2d = velocity:Length2D()
 	if len2d > 1 then
-		pl:SetPlaybackRate(math.min(len2d / maxseqgroundspeed * 0.75, 3))
+		pl:SetPlaybackRate(math_min(len2d / maxseqgroundspeed * 0.75, 3))
 	else
 		pl:SetPlaybackRate(1)
 	end
@@ -163,9 +140,25 @@ function CLASS:UpdateAnimation(pl, velocity, maxseqgroundspeed)
 	return true
 end
 
+if SERVER then
+	function CLASS:AltUse(pl)
+		pl:StartFeignDeath()
+	end
+
+	function CLASS:IgnoreLegDamage(pl, dmginfo)
+		return true
+	end
+end
+
 if not CLIENT then return end
 
 CLASS.Icon = "zombiesurvival/killicons/legs"
+local math_Clamp = math.Clamp
+local math_Approach = math.Approach
+
+local render_EnableClipping = render.EnableClipping
+local render_PushCustomClipPlane = render.PushCustomClipPlane
+local render_PopCustomClipPlane = render.PopCustomClipPlane
 
 -- This whole point of this is to stop drawing decals on the upper part of the model. It doesn't actually do anything to the visible model.
 local undo = false
@@ -175,8 +168,8 @@ function CLASS:PrePlayerDraw(pl)
 		local pos, ang = pl:GetBonePosition(boneid)
 		if pos then
 			local normal = ang:Forward() * -1
-			render.EnableClipping(true)
-			render.PushCustomClipPlane(normal, normal:Dot(pos))
+			render_EnableClipping(true)
+			render_PushCustomClipPlane(normal, normal:Dot(pos))
 			undo = true
 		end
 	end
@@ -184,8 +177,8 @@ end
 
 function CLASS:PostPlayerDraw(pl)
 	if undo then
-		render.PopCustomClipPlane()
-		render.EnableClipping(false)
+		render_PopCustomClipPlane()
+		render_EnableClipping(false)
 	end
 end
 
@@ -197,7 +190,7 @@ function CLASS:BuildBonePositions(pl)
 	local wep = pl:GetActiveWeapon()
 	if wep:IsValid() then
 		if wep.GetSwingEndTime and wep:GetSwingEndTime() > 0 then
-			desired = 1 - math.Clamp((wep:GetSwingEndTime() - CurTime()) / wep.MeleeDelay, 0, 1)
+			desired = 1 - math_Clamp((wep:GetSwingEndTime() - CurTime()) / wep.MeleeDelay, 0, 1)
 		end
 
 		if wep:GetDTBool(3) then
@@ -210,7 +203,7 @@ function CLASS:BuildBonePositions(pl)
 	if desired > 0 then
 		pl.m_KickDelta = CosineInterpolation(0, 1, desired)
 	else
-		pl.m_KickDelta = math.Approach(pl.m_KickDelta or 0, desired, FrameTime() * 4)
+		pl.m_KickDelta = math_Approach(pl.m_KickDelta or 0, desired, FrameTime() * 4)
 	end
 
 	local boneid = pl:LookupBone(bone)

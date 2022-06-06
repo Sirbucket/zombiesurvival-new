@@ -25,6 +25,9 @@ CLASS.CanFeignDeath = true
 
 CLASS.BloodColor = BLOOD_COLOR_YELLOW
 
+CLASS.PainSounds = {"npc/zombie_poison/pz_warn1.wav", "npc/zombie_poison/pz_warn2.wav"}
+CLASS.DeathSounds = {"npc/zombie_poison/pz_die2.wav"}
+
 local CurTime = CurTime
 local math_random = math.random
 local math_max = math.max
@@ -35,90 +38,83 @@ local STEPSOUNDTIME_NORMAL = STEPSOUNDTIME_NORMAL
 local STEPSOUNDTIME_WATER_FOOT = STEPSOUNDTIME_WATER_FOOT
 local STEPSOUNDTIME_ON_LADDER = STEPSOUNDTIME_ON_LADDER
 local STEPSOUNDTIME_WATER_KNEE = STEPSOUNDTIME_WATER_KNEE
-local DIR_BACK = DIR_BACK
 local ACT_HL2MP_ZOMBIE_SLUMP_RISE = ACT_HL2MP_ZOMBIE_SLUMP_RISE
 local ACT_HL2MP_SWIM_PISTOL = ACT_HL2MP_SWIM_PISTOL
 local ACT_HL2MP_IDLE_CROUCH_ZOMBIE = ACT_HL2MP_IDLE_CROUCH_ZOMBIE
 local ACT_HL2MP_IDLE_ZOMBIE = ACT_HL2MP_IDLE_ZOMBIE
 local ACT_HL2MP_WALK_CROUCH_ZOMBIE_01 = ACT_HL2MP_WALK_CROUCH_ZOMBIE_01
 local ACT_HL2MP_WALK_ZOMBIE_01 = ACT_HL2MP_WALK_ZOMBIE_01
+local GESTURE_SLOT_ATTACK_AND_RELOAD = GESTURE_SLOT_ATTACK_AND_RELOAD
+local PLAYERANIMEVENT_ATTACK_PRIMARY = PLAYERANIMEVENT_ATTACK_PRIMARY
+local PLAYERANIMEVENT_RELOAD = PLAYERANIMEVENT_RELOAD
+local ACT_GMOD_GESTURE_TAUNT_ZOMBIE = ACT_GMOD_GESTURE_TAUNT_ZOMBIE
+local ACT_INVALID = ACT_INVALID
 
-local StepSounds = {
-	"npc/zombie/foot1.wav",
-	"npc/zombie/foot2.wav",
-	"npc/zombie/foot3.wav"
+local g_tbl = {
+	[1] = STEPSOUNDTIME_NORMAL,
+	[2] = STEPSOUNDTIME_WATER_FOOT,
+	[3] = STEPSOUNDTIME_ON_LADDER,
+	[4] = STEPSOUNDTIME_WATER_KNEE,
+	[5] = ACT_HL2MP_ZOMBIE_SLUMP_RISE,
+	[6] = ACT_HL2MP_SWIM_PISTOL,
+	[7] = ACT_HL2MP_IDLE_CROUCH_ZOMBIE,
+	[8] = ACT_HL2MP_IDLE_ZOMBIE,
+	[9] = ACT_HL2MP_WALK_CROUCH_ZOMBIE_01,
+	[10] = ACT_HL2MP_WALK_ZOMBIE_01,
+	[11] = GESTURE_SLOT_ATTACK_AND_RELOAD,
+	[12] = PLAYERANIMEVENT_ATTACK_PRIMARY,
+	[13] = PLAYERANIMEVENT_RELOAD,
+	[14] = ACT_GMOD_GESTURE_TAUNT_ZOMBIE,
+	[15] = ACT_INVALID
 }
-local ScuffSounds = {
-	"npc/zombie/foot_slide1.wav",
-	"npc/zombie/foot_slide2.wav",
-	"npc/zombie/foot_slide3.wav"
-}
+
 function CLASS:PlayerFootstep(pl, vFootPos, iFoot, strSoundName, fVolume, pFilter)
-	if math_random() < 0.15 then
-		pl:EmitSound(ScuffSounds[math_random(#ScuffSounds)], 70)
+	if iFoot == 0 then
+		pl:EmitSound("npc/zombie/foot1.wav", 70)
 	else
-		pl:EmitSound(StepSounds[math_random(#StepSounds)], 70)
+		pl:EmitSound("npc/zombie/foot2.wav", 70)
 	end
-
-	return true
-end
-
-function CLASS:PlayPainSound(pl)
-	pl:EmitSound("npc/zombie_poison/pz_warn"..math_random(2)..".wav", 75, math.Rand(137, 143))
-	pl.NextPainSound = CurTime() + 0.5
-
-	return true
-end
-
-function CLASS:PlayDeathSound(pl)
-	pl:EmitSound("npc/zombie_poison/pz_die2.wav", 75, math.Rand(122, 128))
 
 	return true
 end
 
 function CLASS:PlayerStepSoundTime(pl, iType, bWalking)
-	if iType == STEPSOUNDTIME_NORMAL or iType == STEPSOUNDTIME_WATER_FOOT then
-		return 625 - pl:GetVelocity():Length()
-	elseif iType == STEPSOUNDTIME_ON_LADDER then
-		return 600
-	elseif iType == STEPSOUNDTIME_WATER_KNEE then
-		return 750
-	end
+	local switch = {
+		[g_tbl[1]] = function(pl) return 625 - pl:GetVelocity():Length() end,
+		[g_tbl[2]] = function(pl) return 625 - pl:GetVelocity():Length() end,
+		[g_tbl[3]] = function(pl) return 600 end, 
+		[g_tbl[4]] = function(pl) return 750 end
+	}
 
-	return 450
+	return switch[iType] and switch[iType](pl) or 450
 end
 
 function CLASS:KnockedDown(pl, status, exists)
-	pl:AnimResetGestureSlot(GESTURE_SLOT_ATTACK_AND_RELOAD)
+	pl:AnimResetGestureSlot(g_tbl[11])
 end
 
 function CLASS:CalcMainActivity(pl, velocity)
 	local feign = pl.FeignDeath
-	if feign and feign:IsValid() then
-		if feign:GetDirection() == DIR_BACK then
-			return 1, pl:LookupSequence("zombie_slump_rise_02_fast")
-		end
-
-		return ACT_HL2MP_ZOMBIE_SLUMP_RISE, -1
+		return g_tbl[5], -1
 	end
 
 	if pl:WaterLevel() >= 3 then
-		return ACT_HL2MP_SWIM_PISTOL, -1
+		return g_tbl[6], -1
 	end
 
 	if velocity:Length2DSqr() <= 1 then
 		if pl:Crouching() and pl:OnGround() then
-			return ACT_HL2MP_IDLE_CROUCH_ZOMBIE, -1
+			return g_tbl[7], -1
 		end
 
-		return ACT_HL2MP_IDLE_ZOMBIE, -1
+		return g_tbl[8], -1
 	end
 
 	if pl:Crouching() and pl:OnGround() then
-		return ACT_HL2MP_WALK_CROUCH_ZOMBIE_01 - 1 + math_ceil((CurTime() / 3 + pl:EntIndex()) % 3), -1
+		return g_tbl[9] - 1 + math_ceil((CurTime() / 3 + pl:EntIndex()) % 3), -1
 	end
 
-	return ACT_HL2MP_WALK_ZOMBIE_01 - 1 + math_ceil((CurTime() / 3 + pl:EntIndex()) % 3), -1
+	return g_tbl[10] - 1 + math_ceil((CurTime() / 3 + pl:EntIndex()) % 3), -1
 end
 
 function CLASS:UpdateAnimation(pl, velocity, maxseqgroundspeed)
@@ -144,13 +140,18 @@ function CLASS:UpdateAnimation(pl, velocity, maxseqgroundspeed)
 end
 
 function CLASS:DoAnimationEvent(pl, event, data)
-	if event == PLAYERANIMEVENT_ATTACK_PRIMARY then
-		pl:DoZombieAttackAnim(data)
-		return ACT_INVALID
-	elseif event == PLAYERANIMEVENT_RELOAD then
-		pl:AnimRestartGesture(GESTURE_SLOT_ATTACK_AND_RELOAD, ACT_GMOD_GESTURE_TAUNT_ZOMBIE, true)
-		return ACT_INVALID
-	end
+	local switch = {
+		[g_tbl[12]] = function(pl, data)
+			pl:DoZombieAttackAnim(data)
+			return g_tbl[15]
+		end,
+		[g_tbl[13]] = function(pl, data)
+			pl:AnimRestartGesture(g_tbl[11], g_tbl[14], true)
+			return g_tbl[15]
+		end
+	}
+
+	return switch[event] and switch[event](pl, data)
 end
 
 function CLASS:DoesntGiveFear(pl)

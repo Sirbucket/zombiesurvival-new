@@ -22,25 +22,31 @@ CLASS.ViewOffsetDucked = Vector(0, 0, 24)
 
 CLASS.UsePlayerModel = true
 CLASS.UsePreviousModel = false
-
-if SERVER then
-	function CLASS:OnKilled() end
-end
-
 local ACT_ZOMBIE_LEAPING = ACT_ZOMBIE_LEAPING
 local ACT_HL2MP_RUN_ZOMBIE_FAST = ACT_HL2MP_RUN_ZOMBIE_FAST
 local ACT_ZOMBIE_CLIMB_UP = ACT_ZOMBIE_CLIMB_UP
 local ACT_GMOD_GESTURE_TAUNT_ZOMBIE = ACT_GMOD_GESTURE_TAUNT_ZOMBIE
 local ACT_GMOD_GESTURE_RANGE_ZOMBIE_SPECIAL = ACT_GMOD_GESTURE_RANGE_ZOMBIE_SPECIAL
 local ACT_INVALID = ACT_INVALID
+local PLAYERANIMEVENT_ATTACK_PRIMARY = PLAYERANIMEVENT_ATTACK_PRIMARY
+local PLAYERANIMEVENT_RELOAD = PLAYERANIMEVENT_RELOAD
+local GESTURE_SLOT_ATTACK_AND_RELOAD = GESTURE_SLOT_ATTACK_AND_RELOAD
+
+local g_tbl = {
+	[1] = ACT_ZOMBIE_LEAPING,
+	[2] = ACT_HL2MP_RUN_ZOMBIE_FAST,
+	[3] = ACT_ZOMBIE_CLIMB_UP,
+	[4] = ACT_GMOD_GESTURE_TAUNT_ZOMBIE,
+	[5] = ACT_GMOD_GESTURE_RANGE_ZOMBIE_SPECIAL,
+	[6] = ACT_INVALID,
+	[7] = PLAYERANIMEVENT_ATTACK_PRIMARY,
+	[8] = PLAYERANIMEVENT_RELOAD,
+	[9] = GESTURE_SLOT_ATTACK_AND_RELOAD
+}
+
 
 local math_Clamp = math.Clamp
 local math_min = math.min
-
-if SERVER then
-	function CLASS:AltUse(pl) end
-	function CLASS:OnKilled(pl, attacker, inflictor, suicide, headshot, dmginfo) end
-end
 
 function CLASS:Move(pl, mv)
 	local wep = pl:GetActiveWeapon()
@@ -59,20 +65,20 @@ function CLASS:ScalePlayerDamage(pl, hitgroup, dmginfo)
 end
 
 function CLASS:IgnoreLegDamage(pl, dmginfo)
-	return true
+	return false
 end
 
 function CLASS:CalcMainActivity(pl, velocity)
 	local wep = pl:GetActiveWeapon()
 	if wep:IsValid() and wep.GetClimbing and wep:GetClimbing() then
-		return ACT_ZOMBIE_CLIMB_UP, -1
+		return g_tbl[3], -1
 	end
 
 	if not pl:OnGround() or pl:WaterLevel() >= 3 then
-		return ACT_ZOMBIE_LEAPING, -1
+		return g_tbl[1], -1
 	end
 
-	return ACT_HL2MP_RUN_ZOMBIE_FAST, -1
+	return g_tbl[2], -1
 end
 
 function CLASS:UpdateAnimation(pl, velocity, maxseqgroundspeed)
@@ -101,13 +107,18 @@ function CLASS:UpdateAnimation(pl, velocity, maxseqgroundspeed)
 end
 
 function CLASS:DoAnimationEvent(pl, event, data)
-	if event == PLAYERANIMEVENT_ATTACK_PRIMARY then
-		pl:AnimRestartGesture(GESTURE_SLOT_ATTACK_AND_RELOAD, ACT_GMOD_GESTURE_RANGE_ZOMBIE_SPECIAL, true)
-		return ACT_INVALID
-	elseif event == PLAYERANIMEVENT_RELOAD then
-		pl:AnimRestartGesture(GESTURE_SLOT_ATTACK_AND_RELOAD, ACT_GMOD_GESTURE_TAUNT_ZOMBIE, true)
-		return ACT_INVALID
-	end
+	local switch = {
+		[g_tbl[7]] = function(pl)
+			pl:AnimRestartGesture(g_tbl[9], g_tbl[5], true)
+			return g_tbl[6]
+		end,
+		[g_tbl[8]] = function(pl)
+			pl:AnimRestartGesture(g_tbl[9], g_tbl[4], true)
+			return g_tbl[6]
+		end
+	}
+
+	return switch[event] and switch[event](pl)
 end
 
 if SERVER then

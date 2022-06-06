@@ -92,6 +92,7 @@ if CLIENT then
     local matBlack = CreateMaterial("shadowlurkersheet", "UnlitGeneric", {["$basetexture"] = "Tools/toolsblack", ["$model"] = 1})
     local vecEyeLeft = Vector(5, -3.5, -1)
     local vecEyeRight = Vector(5, -3.5, 1)
+    
     function CLASS:PrePlayerDraw(pl)
         render_SetColorModulation(0.1, 0.1, 0.1)
         render_SetBlend(0.45)

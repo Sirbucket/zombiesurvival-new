@@ -23,7 +23,7 @@ CLASS.SkeletalRes = true
 local math_random = math.random
 
 function CLASS:PlayerFootstep(pl, vFootPos, iFoot, strSoundName, fVolume, pFilter)
-	if math_random(2) == 1 then
+	if iFoot == 0 then
 		pl:EmitSound("npc/barnacle/neck_snap1.wav", 65, math_random(115, 130), 0.27)
 	else
 		pl:EmitSound("npc/barnacle/neck_snap2.wav", 65, math_random(115, 130), 0.27)

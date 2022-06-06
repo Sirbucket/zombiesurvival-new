@@ -47,12 +47,6 @@ local ACT_INVALID = ACT_INVALID
 local GESTURE_SLOT_ATTACK_AND_RELOAD = GESTURE_SLOT_ATTACK_AND_RELOAD
 local ACT_GMOD_GESTURE_TAUNT_ZOMBIE = ACT_GMOD_GESTURE_TAUNT_ZOMBIE
 local PLAYERANIMEVENT_RELOAD = PLAYERANIMEVENT_RELOAD
-function CLASS:PlayPainSound(pl)
-	pl:EmitSound(string_format("npc/zombie_poison/pz_idle%d.wav", math_random(2, 3)), 72, math_Rand(75, 85))
-	pl.NextPainSound = CurTime() + 0.5
-
-	return true
-end
 
 local StepSounds = {
 	"npc/zombie/foot1.wav",
@@ -65,10 +59,10 @@ local ScuffSounds = {
 	"npc/zombie/foot_slide3.wav"
 }
 function CLASS:PlayerFootstep(pl, vFootPos, iFoot, strSoundName, fVolume, pFilter)
-	if math_random() < 0.15 then
-		pl:EmitSound(ScuffSounds[math_random(#ScuffSounds)], 70, 75)
+	if iFoot == 0 then
+		pl:EmitSound("npc/zombie/foot1.wav", 70, 75)
 	else
-		pl:EmitSound(StepSounds[math_random(#StepSounds)], 70, 75)
+		pl:EmitSound("npc/zombie/foot2.wav", 70, 75)
 	end
 
 	return true
@@ -132,10 +126,13 @@ function CLASS:DoAnimationEvent(pl, event, data)
 end
 
 function CLASS:DoesntGiveFear(pl)
-	return pl.FeignDeath and pl.FeignDeath:IsValid()
+	local feign = pl.FeignDeath
+	return feign and feign:IsValid()
 end
 
 if SERVER then
+	local util_Effect = util.Effect
+	local timer_Simple = timer.Simple
     function CLASS:AltUse(pl)
         pl:StartFeignDeath()
     end
@@ -148,13 +145,13 @@ if SERVER then
         local effectdata = EffectData()
             effectdata:SetOrigin(pos)
             effectdata:SetNormal(dir:Forward())
-        util.Effect("explosion_fat", effectdata, true)
+        util_Effect("explosion_fat", effectdata, true)
 
         for i=1, 6 do
             local ang = Angle()
             ang:Set(dir)
-            ang:RotateAroundAxis(ang:Up(), math.Rand(-30, 30))
-            ang:RotateAroundAxis(ang:Right(), math.Rand(-30, 30))
+            ang:RotateAroundAxis(ang:Up(), math_Rand(-30, 30))
+            ang:RotateAroundAxis(ang:Right(), math_Rand(-30, 30))
 
             local heading = ang:Forward()
 
@@ -167,7 +164,7 @@ if SERVER then
                 local phys = ent:GetPhysicsObject()
                 if phys:IsValid() then
                     phys:Wake()
-                    phys:SetVelocityInstantaneous(heading * math.Rand(120, 250))
+                    phys:SetVelocityInstantaneous(heading * math_Rand(120, 250))
                 end
             end
         end
@@ -177,7 +174,7 @@ if SERVER then
         if attacker ~= pl and not suicide then
             local pos = pl:LocalToWorld(pl:OBBCenter())
             local ang = pl:SyncAngles()
-            timer.Simple(0, function() Bomb(pl, pos, ang) end)
+            timer_Simple(0, function() Bomb(pl, pos, ang) end)
         end
     end
 end

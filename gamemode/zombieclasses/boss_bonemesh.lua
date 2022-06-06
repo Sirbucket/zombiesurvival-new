@@ -44,6 +44,23 @@ local GESTURE_SLOT_ATTACK_AND_RELOAD = GESTURE_SLOT_ATTACK_AND_RELOAD
 local ACT_GMOD_GESTURE_RANGE_ZOMBIE_SPECIAL = ACT_GMOD_GESTURE_RANGE_ZOMBIE_SPECIAL
 local ACT_GMOD_GESTURE_TAUNT_ZOMBIE = ACT_GMOD_GESTURE_TAUNT_ZOMBIE
 local ACT_INVALID = ACT_INVALID
+local PLAYERANIMEVENT_RELOAD = PLAYERANIMEVENT_RELOAD
+
+local g_tbl = {
+	[1] = STEPSOUNDTIME_NORMAL,
+	[2] = STEPSOUNDTIME_WATER_FOOT,
+	[3] = STEPSOUNDTIME_ON_LADDER,
+	[4] = STEPSOUNDTIME_WATER_KNEE,
+	[5] = ACT_ZOMBIE_LEAPING,
+	[6] = ACT_HL2MP_RUN_ZOMBIE_FAST,
+	[7] = PLAYERANIMEVENT_ATTACK_PRIMARY,
+	[8] = GESTURE_SLOT_ATTACK_AND_RELOAD,
+	[9] = ACT_GMOD_GESTURE_RANGE_ZOMBIE_SPECIAL,
+	[10] = ACT_GMOD_GESTURE_TAUNT_ZOMBIE,
+	[11] = ACT_INVALID,
+	[12] = PLAYERANIMEVENT_RELOAD
+}
+
 function CLASS:PlayerFootstep(pl, vFootPos, iFoot, strSoundName, fVolume, pFilter)
 	if iFoot == 0 then
 		pl:EmitSound("npc/antlion_guard/foot_light1.wav", 70, math_random(115, 120))
@@ -55,23 +72,22 @@ function CLASS:PlayerFootstep(pl, vFootPos, iFoot, strSoundName, fVolume, pFilte
 end
 
 function CLASS:PlayerStepSoundTime(pl, iType, bWalking)
-	if iType == STEPSOUNDTIME_NORMAL or iType == STEPSOUNDTIME_WATER_FOOT then
-		return 450 - pl:GetVelocity():Length()
-	elseif iType == STEPSOUNDTIME_ON_LADDER then
-		return 400
-	elseif iType == STEPSOUNDTIME_WATER_KNEE then
-		return 550
-	end
-
-	return 250
+	local switch = {
+		[g_tbl[1]] = function(pl) return 450 - pl:GetVelocity():Length() end,
+		[g_tbl[2]] = function(pl) return 450 - pl:GetVelocity():Length() end,
+		[g_tbl[3]] = function(pl) return 400 end,
+		[g_tbl[4]] = function(pl) return 550 end
+	}
+	
+	return switch[iType] and switch[iType](pl) or 250
 end
 
 function CLASS:CalcMainActivity(pl, velocity)
 	if not pl:OnGround() or pl:WaterLevel() >= 3 then
-		return ACT_ZOMBIE_LEAPING, -1
+		return g_tbl[5], -1
 	end
 
-	return ACT_HL2MP_RUN_ZOMBIE_FAST, -1
+	return g_tbl[6], -1
 end
 
 function CLASS:UpdateAnimation(pl, velocity, maxseqgroundspeed)
@@ -91,17 +107,22 @@ function CLASS:ScalePlayerDamage(pl, hitgroup, dmginfo)
 end
 
 function CLASS:IgnoreLegDamage(pl, dmginfo)
-	return true
+	return false
 end
 
 function CLASS:DoAnimationEvent(pl, event, data)
-	if event == PLAYERANIMEVENT_ATTACK_PRIMARY then
-		pl:AnimRestartGesture(GESTURE_SLOT_ATTACK_AND_RELOAD, ACT_GMOD_GESTURE_RANGE_ZOMBIE_SPECIAL, true)
-		return ACT_INVALID
-	elseif event == PLAYERANIMEVENT_RELOAD then
-		pl:AnimRestartGesture(GESTURE_SLOT_ATTACK_AND_RELOAD, ACT_GMOD_GESTURE_TAUNT_ZOMBIE, true)
-		return ACT_INVALID
-	end
+	local switch = {
+		[g_tbl[7]] = function(pl) 
+			pl:AnimRestartGesture(g_tbl[8], g_tbl[9], true)
+			return g_tbl[11]
+		end,
+		[g_tbl[12]] = function(pl)
+			pl:AnimRestartGesture(g_tbl[8], g_tbl[10], true)
+			return g_tbl[11]
+		end
+	}
+
+	return switch[event] and switch[event](pl)
 end
 
 if SERVER then

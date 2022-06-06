@@ -38,62 +38,61 @@ local ACT_GMOD_GESTURE_RANGE_ZOMBIE = ACT_GMOD_GESTURE_RANGE_ZOMBIE
 local ACT_HL2MP_ZOMBIE_SLUMP_RISE = ACT_HL2MP_ZOMBIE_SLUMP_RISE
 local ACT_HL2MP_IDLE_CROUCH_ZOMBIE = ACT_HL2MP_IDLE_CROUCH_ZOMBIE
 local ACT_HL2MP_WALK_CROUCH_ZOMBIE_01 = ACT_HL2MP_WALK_CROUCH_ZOMBIE_01
+local PLAYERANIMEVENT_RELOAD = PLAYERANIMEVENT_RELOAD
+local ACT_INVALID = ACT_INVALID
+local GESTURE_SLOT_ATTACK_AND_RELOAD = GESTURE_SLOT_ATTACK_AND_RELOAD
+local ACT_GMOD_GESTURE_TAUNT_ZOMBIE = ACT_GMOD_GESTURE_TAUNT_ZOMBIE
+local PLAYERANIMEVENT_ATTACK_PRIMARY = PLAYERANIMEVENT_ATTACK_PRIMARY
+local DIR_BACK = DIR_BACK
 
-local StepLeftSounds = {
-	"npc/zombie/foot1.wav",
-	"npc/zombie/foot2.wav"
+local g_tbl = {
+	[1] = ACT_HL2MP_SWIM_PISTOL,
+	[2] = ACT_HL2MP_RUN_ZOMBIE,
+	[3] = ACT_GMOD_GESTURE_RANGE_ZOMBIE,
+	[4] = ACT_HL2MP_ZOMBIE_SLUMP_RISE,
+	[5] = ACT_HL2MP_IDLE_CROUCH_ZOMBIE,
+	[6] = ACT_HL2MP_WALK_CROUCH_ZOMBIE_01,
+	[7] = ACT_INVALID,
+	[8] = GESTURE_SLOT_ATTACK_AND_RELOAD,
+	[9] = PLAYERANIMEVENT_RELOAD,
+	[10] = ACT_GMOD_GESTURE_TAUNT_ZOMBIE,
+	[11] = PLAYERANIMEVENT_ATTACK_PRIMARY
 }
-local StepRightSounds = {
-	"npc/zombie/foot2.wav",
-	"npc/zombie/foot3.wav"
-}
+
 function CLASS:PlayerFootstep(pl, vFootPos, iFoot, strSoundName, fVolume, pFilter)
 	if iFoot == 0 then
-		pl:EmitSound(StepLeftSounds[math_random(#StepLeftSounds)], 70)
+		pl:EmitSound("npc/zombie/foot1.wav", 70)
 	else
-		pl:EmitSound(StepRightSounds[math_random(#StepRightSounds)], 70)
+		pl:EmitSound("npc/zombie/foot2.wav", 70)
 	end
 
 	return true
 end
---[[function CLASS:PlayerFootstep(pl, vFootPos, iFoot, strSoundName, fVolume, pFilter)
-	if iFoot == 0 then
-		pl:EmitSound("Zombie.FootstepLeft")
-	else
-		pl:EmitSound("Zombie.FootstepRight")
-	end
-
-	return true
-end]]
 
 function CLASS:CalcMainActivity(pl, velocity)
 	local revive = pl.Revive
 	if revive and revive:IsValid() then
-		return ACT_HL2MP_ZOMBIE_SLUMP_RISE, -1
+		return g_tbl[4], -1
 	end
 
 	local feign = pl.FeignDeath
 	if feign and feign:IsValid() then
-		if feign:GetDirection() == DIR_BACK then
-			return 1, pl:LookupSequence("zombie_slump_rise_02_fast")
-		end
-
-		return ACT_HL2MP_ZOMBIE_SLUMP_RISE, -1
+		return g_tbl[4], -1
 	end
 
 	if pl:WaterLevel() >= 3 then
-		return ACT_HL2MP_SWIM_PISTOL, -1
+		return g_tbl[1], -1
 	end
 
 	if pl:Crouching() and pl:OnGround() then
 		if velocity:Length2DSqr() <= 1 then
-			return ACT_HL2MP_IDLE_CROUCH_ZOMBIE, -1
+			return g_tbl[5], -1
 		end
 
-		return ACT_HL2MP_WALK_CROUCH_ZOMBIE_01 - 1 + math_ceil((CurTime() / 4 + pl:EntIndex()) % 3), -1
+		return g_tbl[6] - 1 + math_ceil((CurTime() / 4 + pl:EntIndex()) % 3), -1
 	end
 
-	return ACT_HL2MP_RUN_ZOMBIE, -1
+	return g_tbl[2], -1
 end
 
 function CLASS:UpdateAnimation(pl, velocity, maxseqgroundspeed)
@@ -126,13 +125,18 @@ function CLASS:UpdateAnimation(pl, velocity, maxseqgroundspeed)
 end
 
 function CLASS:DoAnimationEvent(pl, event, data)
-	if event == PLAYERANIMEVENT_ATTACK_PRIMARY then
-		pl:DoZombieAttackAnim(data)
-		return ACT_INVALID
-	elseif event == PLAYERANIMEVENT_RELOAD then
-		pl:AnimRestartGesture(GESTURE_SLOT_ATTACK_AND_RELOAD, ACT_GMOD_GESTURE_TAUNT_ZOMBIE, true)
-		return ACT_INVALID
-	end
+	local switch = {
+		[g_tbl[11]] = function(pl, data) 
+			pl:DoZombieAttackAnim(data)
+			return g_tbl[7]
+		end,
+		[g_tbl[8]] = function(pl, data)
+			pl:AnimRestartGesture(g_tbl[9], g_tbl[10], true)
+			return g_tbl[7]
+		end
+	}
+	
+	return switch[event] and switch[event](pl, data)
 end
 
 function CLASS:DoesntGiveFear(pl)
@@ -150,13 +154,13 @@ if SERVER then
 end
 
 if not CLIENT then return end
-
+local render_SetColorModulation = render.SetColorModulation
 CLASS.Icon = "zombiesurvival/killicons/fresh_dead"
 
 function CLASS:PrePlayerDraw(pl)
-	render.SetColorModulation(0.5, 0.9, 0.5)
+	render_SetColorModulation(0.5, 0.9, 0.5)
 end
 
 function CLASS:PostPlayerDraw(pl)
-	render.SetColorModulation(1, 1, 1)
+	render_SetColorModulation(1, 1, 1)
 end
